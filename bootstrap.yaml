@@ -1,0 +1,245 @@
+parameters:
+- name: rgName
+  displayName: Resource Group Name
+  type: string
+  default: tf_starter
+
+- name: location
+  displayName: Location in Azure
+  type: string
+  default: uksouth
+
+- name: storageAccountName
+  displayName: Storage Account Name Suffix
+  type: string
+  default: strgtfstate
+
+- name: moduleName
+  displayName: ModuleName
+  type: string
+  default: bastion-vms
+  values:
+  - bootstrap
+  - ado
+  - sc
+  - bastion-vms
+
+- name: terraformAction
+  displayName: Terraform action
+  type: string
+  default: "Plan"
+  values:
+  - "Plan"
+  - "Apply"
+  - "Destroy"
+
+
+#trigger: none
+#- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+  - stage: Lint
+    displayName: Format and lint code
+    jobs:
+      - job: "Bootstrap"
+        steps:
+        - task: PowerShell@2
+          inputs:
+              targetType: 'inline'
+              script: Write-Host "##vso[task.LogIssue type=warning;]This is the warning"
+
+        - task: AzureCLI@2
+          displayName: Azure CLI
+          inputs:
+            azureSubscription: Bootstrap
+            scriptType: pscore
+            scriptLocation: inlineScript
+            addSpnToEnvironment: true
+            inlineScript: |
+              # az --version
+              # #az account show
+              # az account list -o table
+              $rg = az group exists -n ${{parameters.rgName}}
+              if($rg -eq 'false'){
+                "Resource group ${{parameters.rgName}} not found - Will attempt to create"
+                az group create --name ${{parameters.rgName}} --location ${{parameters.location}}
+                "Created"
+              }
+              else {
+                "Resource group ${{parameters.rgName}} found"
+              }
+
+              $StorageAccount  = az storage account list --resource-group ${{parameters.rgName}} --output jsonc | ConvertFrom-Json
+              
+              
+
+              if($StorageAccount.name){
+                "Storage Account Found - $($StorageAccount.name)"
+                $StorageAccountName = $StorageAccount.name
+              }
+              else {
+                $randomString = (-join ((65..90) + (97..122) | Get-Random -Count 5 | % {[char]$_})).ToLower()
+                $newStorageAccountName = "${{parameters.storageAccountName}}$($randomString)"
+                "No Storage Accounts found - will create using name: $($newStorageAccountName)"
+                az provider register -n 'Microsoft.Storage' --accept-terms --wait
+                az storage account create --resource-group ${{parameters.rgName}} --name $newStorageAccountName --kind StorageV2 --access-tier Hot --sku Standard_LRS --encryption-services blob --https-only true --min-tls-version "TLS1_2" --allow-blob-public-access false
+                az storage account update --resource-group ${{parameters.rgName}} --name $newStorageAccountName --default-action Deny
+
+                
+                
+                $StorageAccountName = $newStorageAccountName
+                #az storage account network-rule add --resource-group ${{parameters.rgName}} --account-name $newStorageAccountName --ip-address "212.20.233.28"
+                #Start-Sleep -Seconds 600
+                #az storage container create -n tfstate --account-name $newStorageAccountName
+
+                
+                
+                
+              }
+              echo "##vso[task.setvariable variable=StorageAccountName]$StorageAccountName"
+              Write-Host "##vso[task.setvariable variable=hostedAgentOutboundIpAddress]$outboundIP"
+
+        #This is safe enough because we still have user/pass protection (Layer 7). Only network is exposed temporarily (Layer 4).
+        - task: AzureCLI@2
+          displayName: Relax Storage Account FW
+          inputs:
+            azureSubscription: Bootstrap
+            scriptType: pscore
+            scriptLocation: inlineScript
+            inlineScript: |
+              az storage account update --resource-group ${{parameters.rgName}} --name $(StorageAccountName) --default-action Allow | Out-Null
+              Start-Sleep -Seconds 30
+
+        - task: AzureCLI@2
+          displayName: Create tfstate container if not exists
+          inputs:
+            azureSubscription: Bootstrap
+            scriptType: pscore
+            scriptLocation: inlineScript
+            inlineScript: |
+
+              $container = az storage container exists --account-name $(StorageAccountName) --name tfstate
+
+              if (($container | ConvertFrom-Json).exists) {
+                  "Blob tf_State exists"
+              }
+              else {
+                  "No blob called tf_state was found - will create"
+                  az storage container create --auth-mode login --name tfstate --account-name $(StorageAccountName) | Out-Null
+                  "Created"
+              }
+
+        - task: ms-devlabs.custom-terraform-tasks.custom-terraform-installer-task.TerraformInstaller@0
+          displayName: 'Install Terraform latest'
+          inputs:
+              terraformVersion: latest
+
+        - task: AzureCLI@2
+          displayName: TF - Init
+          inputs:
+            addSpnToEnvironment: true
+            azureSubscription: Bootstrap
+            scriptType: bash
+            workingDirectory: modules/${{parameters.moduleName}}
+            scriptLocation: inlineScript
+            inlineScript: |
+              # Inherit Azure CLI service connection
+              # Azure service connection using workload identity federation
+              # The idToken has a lifetime of 10 minutes.
+              # Only appears to work in bash
+              export ARM_CLIENT_ID=$servicePrincipalId
+              export ARM_OIDC_TOKEN=$idToken
+              export ARM_TENANT_ID=$tenantId
+              export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+              export ARM_USE_OIDC=true
+
+              terraform init \
+              -backend-config="resource_group_name=${{parameters.rgName}}" \
+              -backend-config="storage_account_name=$(StorageAccountName)" \
+              -backend-config="container_name=tfstate" \
+              -backend-config="key=${{parameters.moduleName}}.tfstate" \
+              -var="storage_account_name=$(StorageAccountName)" 
+
+        - ${{ if eq(parameters.terraformAction, 'Plan') }}:
+          - task: AzureCLI@2
+            displayName: TF - ${{parameters.terraformAction}}
+            inputs:
+              addSpnToEnvironment: true
+              azureSubscription: Bootstrap
+              scriptType: bash
+              workingDirectory: modules/${{parameters.moduleName}}
+              scriptLocation: inlineScript
+              inlineScript: |
+                # Inherit Azure CLI service connection
+                # The idToken has a lifetime of 10 minutes.
+                # Only appears to work in bash
+                export ARM_CLIENT_ID=$servicePrincipalId
+                export ARM_OIDC_TOKEN=$idToken
+                export ARM_TENANT_ID=$tenantId
+                export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+                export ARM_USE_OIDC=true
+
+                terraform plan \
+                -var="storage_account_name=$(StorageAccountName)"
+
+        - ${{ if eq(parameters.terraformAction, 'Apply') }}:
+          - task: AzureCLI@2
+            displayName: TF - ${{parameters.terraformAction}}
+            inputs:
+              addSpnToEnvironment: true
+              azureSubscription: Bootstrap
+              scriptType: bash
+              workingDirectory: modules/${{parameters.moduleName}}
+              scriptLocation: inlineScript
+              inlineScript: |
+                # Inherit Azure CLI service connection
+                # The idToken has a lifetime of 10 minutes.
+                # Only appears to work in bash
+                export ARM_CLIENT_ID=$servicePrincipalId
+                export ARM_OIDC_TOKEN=$idToken
+                export ARM_TENANT_ID=$tenantId
+                export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+                export ARM_USE_OIDC=true
+
+                terraform apply \
+                -input=false \
+                -auto-approve \
+                -var="storage_account_name=$(StorageAccountName)"
+
+        - ${{ if eq(parameters.terraformAction, 'Destroy') }}:
+          - task: AzureCLI@2
+            displayName: TF - ${{parameters.terraformAction}}
+            inputs:
+              addSpnToEnvironment: true
+              azureSubscription: Bootstrap
+              scriptType: bash
+              workingDirectory: modules/${{parameters.moduleName}}
+              scriptLocation: inlineScript
+              inlineScript: |
+                # Inherit Azure CLI service connection
+                # The idToken has a lifetime of 10 minutes.
+                # Only appears to work in bash
+                export ARM_CLIENT_ID=$servicePrincipalId
+                export ARM_OIDC_TOKEN=$idToken
+                export ARM_TENANT_ID=$tenantId
+                export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+                export ARM_USE_OIDC=true
+
+                terraform destroy \
+                -input=false \
+                -auto-approve \
+                -parallelism=1 \
+                -var="storage_account_name=$(StorageAccountName)"
+        
+        - task: AzureCLI@2
+          displayName: Restrict Storage Account FW
+          inputs:
+            azureSubscription: Bootstrap
+            scriptType: pscore
+            scriptLocation: inlineScript
+            inlineScript: |
+              az storage account update --resource-group ${{parameters.rgName}} --name $(StorageAccountName) --default-action Deny
+
