@@ -2,7 +2,7 @@ resource "azurerm_linux_virtual_machine" "tf-linux-vm-01" {
   admin_username                  = "adminuser"
   admin_password                  = random_password.rndm-pswd.result
   disable_password_authentication = false # this must be 'true' if admin_password is not used ie., like when using admin_ssh_keys as an example
-  location                        = var.location
+  location                        = "uksouth"
   name                            = "tf-linux-vm-01"
   network_interface_ids = [
     azurerm_network_interface.linuxVM-PrivIP-nic.id
