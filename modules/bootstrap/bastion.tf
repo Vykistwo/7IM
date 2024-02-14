@@ -18,7 +18,7 @@ resource "azurerm_resource_group" "rg-bastion" {
 
 resource "azurerm_virtual_network" "tf-vnetwork-01" {
   name                = local.vnet_name
-  location            = var.location
+  location            = "uksouth"
   resource_group_name = azurerm_resource_group.rg-bastion.name
   address_space       = local.vnet1-address-space
 }
@@ -40,7 +40,7 @@ resource "azurerm_subnet" "AzureBastionSubnet" {
 # Create PublicIP for Azure Bastion
 resource "azurerm_public_ip" "azb-publicIP" {
   name                = "azb-publicIP"
-  location            = var.location
+  location            = "uksouth"
   resource_group_name = azurerm_resource_group.rg-bastion.name
   allocation_method   = "Static"
   sku                 = "Standard"
@@ -50,7 +50,7 @@ resource "azurerm_public_ip" "azb-publicIP" {
 # Create Azure Bastion Host
 resource "azurerm_bastion_host" "azb-host" {
   name                = "azb-host"
-  location            = var.location
+  location            = "uksouth"
   resource_group_name = azurerm_resource_group.rg-bastion.name
   scale_units         = 2
 
@@ -63,7 +63,7 @@ resource "azurerm_bastion_host" "azb-host" {
 
 
 resource "azurerm_network_interface" "linuxVM-PrivIP-nic" {
-  location            = var.location
+  location            = "uksouth"
   name                = "linuxVM-PrivIP-nic"
   resource_group_name = azurerm_resource_group.rg-bastion.name
   ip_configuration {
@@ -79,7 +79,7 @@ data "azurerm_client_config" "current" {}
 
 resource "azurerm_key_vault" "azkv-name" {
   name                        = local.vault_name
-  location                    = var.location
+  location                    = "uksouth"
   resource_group_name         = azurerm_resource_group.rg-bastion.name
   enabled_for_disk_encryption = true
   tenant_id                   = data.azurerm_client_config.current.tenant_id
@@ -128,7 +128,7 @@ resource "azurerm_key_vault_secret" "linuxVM-pswd" {
 
 resource "azurerm_network_security_group" "azb-nsg" {
   name                = "azb-nsg"
-  location            = var.location
+  location            = "uksouth"
   resource_group_name = azurerm_resource_group.rg-bastion.name
 
   # * * * * * * IN-BOUND Traffic * * * * * * #
@@ -258,7 +258,7 @@ resource "azurerm_subnet_network_security_group_association" "azbsubnet-and-nsg-
 # * * * * * * *  NSG / Security rule for LinuxVM to allow only SSH/RDP traffic from the Azure Bastion * * * * * * *
 resource "azurerm_network_security_group" "VMs-nsg" {
   name                = "VMs-nsg"
-  location            = var.location
+  location            = "uksouth"
   resource_group_name = azurerm_resource_group.rg-bastion.name
 
   security_rule {
