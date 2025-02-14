@@ -41,7 +41,7 @@
           <mxGeometry x="470" y="382" width="1110" height="40" as="geometry" />
         </mxCell>
         <mxCell id="awgjqPLiiekeFISjJ3Pd-91" value="&lt;ul style=&quot;font-size: 20px&quot;&gt;&lt;li style=&quot;font-size: 20px&quot;&gt;Integration Tests&lt;/li&gt;&lt;li style=&quot;font-size: 20px&quot;&gt;E2E Tests&amp;nbsp;&lt;/li&gt;&lt;li style=&quot;font-size: 20px&quot;&gt;Performance Tests&lt;/li&gt;&lt;li style=&quot;font-size: 20px&quot;&gt;UI/UX&lt;/li&gt;&lt;li style=&quot;font-size: 20px&quot;&gt;SCA (Static Analysis)&lt;/li&gt;&lt;li style=&quot;font-size: 20px&quot;&gt;SAST&lt;/li&gt;&lt;li&gt;NFR Tests&lt;/li&gt;&lt;/ul&gt;" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=1;shadow=0;fontSize=20;strokeWidth=3;fillColor=#ffffff;perimeterSpacing=5;strokeColor=#99CCFF;" parent="1" vertex="1">
-          <mxGeometry x="476" y="440" width="264" height="170" as="geometry" />
+          <mxGeometry x="470" y="440" width="264" height="170" as="geometry" />
         </mxCell>
         <mxCell id="awgjqPLiiekeFISjJ3Pd-93" value="&lt;ul style=&quot;font-size: 20px&quot;&gt;&lt;li&gt;Integration Tests&lt;/li&gt;&lt;li&gt;Performance&lt;/li&gt;&lt;li&gt;UAT&lt;/li&gt;&lt;li&gt;Reliability&lt;/li&gt;&lt;li&gt;Disaster Recovery&lt;/li&gt;&lt;/ul&gt;" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=1;shadow=0;fontSize=20;strokeWidth=3;fillColor=#ffffff;perimeterSpacing=5;strokeColor=#3399FF;" parent="1" vertex="1">
           <mxGeometry x="753" y="440" width="270" height="170" as="geometry" />
@@ -65,7 +65,7 @@
           <mxGeometry x="1018" y="130" width="280" height="60" as="geometry" />
         </mxCell>
         <mxCell id="awgjqPLiiekeFISjJ3Pd-115" value="Environments" style="whiteSpace=wrap;html=1;rounded=1;shadow=0;strokeWidth=3;fontSize=20;align=center;labelBackgroundColor=none;fillColor=#FFFFFF;strokeColor=#CCCCCC;fontStyle=1" parent="1" vertex="1">
-          <mxGeometry x="470" y="760" width="1102" height="40" as="geometry" />
+          <mxGeometry x="471" y="760" width="1102" height="40" as="geometry" />
         </mxCell>
         <mxCell id="awgjqPLiiekeFISjJ3Pd-116" value="&lt;ul style=&quot;font-size: 20px&quot;&gt;&lt;li style=&quot;font-size: 20px&quot;&gt;tst&lt;/li&gt;&lt;/ul&gt;" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=1;shadow=0;fontSize=20;strokeWidth=3;fillColor=#ffffff;perimeterSpacing=5;strokeColor=#99CCFF;" parent="1" vertex="1">
           <mxGeometry x="739" y="819" width="270" height="52" as="geometry" />
